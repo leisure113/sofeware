@@ -1,0 +1,16 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+coplay-team-module,com.coplay.team.repository,InMemoryTeamRepository,0,175,0,10,0,30,0,20,0,15
+coplay-team-module,com.coplay.team.service,TeamServiceImpl,13,967,12,84,2,235,12,76,0,40
+coplay-team-module,com.coplay.team.domain,Team,11,180,3,17,3,49,3,29,0,22
+coplay-team-module,com.coplay.team.domain,TeamStatus,0,33,0,0,0,6,0,1,0,1
+coplay-team-module,com.coplay.team.domain,TeamApplication,9,103,2,8,2,30,3,16,1,13
+coplay-team-module,com.coplay.team.domain,ApplicationStatus,0,39,0,0,0,7,0,1,0,1
+coplay-team-module,com.coplay.team.dto,CreateTeamCommand,0,36,0,0,0,1,0,1,0,1
+coplay-team-module,com.coplay.team.dto,TeamDetail,0,45,0,0,0,1,0,1,0,1
+coplay-team-module,com.coplay.team.dto,ApproveCommand,0,15,0,0,0,1,0,1,0,1
+coplay-team-module,com.coplay.team.dto,TeamBrief,0,24,0,0,0,1,0,1,0,1
+coplay-team-module,com.coplay.team.dto,ApplicationBrief,0,18,0,0,0,1,0,1,0,1
+coplay-team-module,com.coplay.team.dto,ApplyTeamCommand,0,12,0,0,0,1,0,1,0,1
+coplay-team-module,com.coplay.team.support,InMemoryTeamLockRegistry,0,29,0,0,0,6,0,3,0,3
+coplay-team-module,com.coplay.team.support,ErrorCode,0,164,0,0,0,25,0,4,0,4
+coplay-team-module,com.coplay.team.support,BizException,11,12,0,0,3,4,1,2,1,2

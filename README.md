@@ -41,7 +41,8 @@ mvn package
 C:\Coding\apache-maven-3.10.0\bin\mvn.cmd -B -Dmaven.repo.local=.m2repo test
 ```
 
-当前测试规模：用户 12 个、内容 12 个、组队 16 个、治理 12 个，共 **52 个 JUnit 5 测试**。
+当前测试规模：用户 12 个、内容 12 个、组队 50 个、治理 12 个，共 **86 个 JUnit 5 测试**。
+组队模块已配置 JaCoCo，语句覆盖率 97.68%、分支覆盖率 87.50%，详见 `team-module/target/site/jacoco/index.html` 和 `docs/实验6-单元测试报告.docx`。
 
 ## 单独运行某个模块
 

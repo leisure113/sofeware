@@ -75,6 +75,13 @@ public final class TeamApplication {
         status = ApplicationStatus.CANCELLED;
     }
 
+    public void leave() {
+        if (status != ApplicationStatus.APPROVED) {
+            throw new IllegalStateException("Only an approved member can leave");
+        }
+        status = ApplicationStatus.LEFT;
+    }
+
     private void requirePending(String action) {
         if (!isPending()) {
             throw new IllegalStateException("Cannot " + action + " an application in status " + status);

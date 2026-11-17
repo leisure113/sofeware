@@ -136,6 +136,8 @@ public final class TeamServiceImpl implements TeamService {
         }
         int approved = teamRepository.countApproved(team.getTeamId());
         if (approved + 1 >= team.getCapacity()) {
+            team.markFull();
+            teamRepository.save(team);
             throw new BizException(ErrorCode.TEAM_FULL);
         }
         if (teamRepository.findActiveApplication(team.getTeamId(), command.userId()).isPresent()) {
@@ -196,6 +198,8 @@ public final class TeamServiceImpl implements TeamService {
             if (approved + 1 >= team.getCapacity()) {
                 application.reject();
                 teamRepository.saveApplication(application);
+                team.markFull();
+                teamRepository.save(team);
                 notificationService.notify(
                         application.getUserId(), "TEAM_RESULT", "Team is full, application rejected");
                 throw new BizException(ErrorCode.TEAM_FULL);
@@ -230,6 +234,34 @@ public final class TeamServiceImpl implements TeamService {
                     .filter(application -> application.getStatus() == ApplicationStatus.APPROVED)
                     .forEach(application -> notificationService.notify(
                             application.getUserId(), "TEAM_RESULT", "Team has been closed"));
+            return null;
+        });
+    }
+
+    @Override
+    public void leaveTeam(long teamId, long userId) {
+        lockRegistry.withLock(teamId, () -> {
+            Team team = requireTeam(teamId);
+            expireIfNeeded(team);
+            if (team.getLeaderId() == userId) {
+                throw new BizException(ErrorCode.CAPTAIN_CANNOT_LEAVE);
+            }
+            TeamApplication application = teamRepository.findApplications(teamId).stream()
+                    .filter(item -> item.getUserId() == userId)
+                    .filter(item -> item.getStatus() == ApplicationStatus.APPROVED)
+                    .findFirst()
+                    .orElseThrow(() -> new BizException(ErrorCode.NOT_TEAM_MEMBER));
+            if (!team.isOpen()) {
+                throw new BizException(ErrorCode.TEAM_CLOSED);
+            }
+            application.leave();
+            teamRepository.saveApplication(application);
+            if (team.getStatus() == TeamStatus.FULL) {
+                team.reopen();
+                teamRepository.save(team);
+            }
+            notificationService.notify(
+                    team.getLeaderId(), "TEAM_MEMBER_LEFT", "A member left the team");
             return null;
         });
     }
