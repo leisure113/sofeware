@@ -123,6 +123,16 @@ public final class Team {
         status = TeamStatus.FULL;
     }
 
+    public void reopen() {
+        if (status == TeamStatus.RECRUITING) {
+            return;
+        }
+        if (status != TeamStatus.FULL) {
+            throw new IllegalStateException("Only a full team can reopen");
+        }
+        status = TeamStatus.RECRUITING;
+    }
+
     public void close() {
         requireOpen("close");
         status = TeamStatus.CLOSED;

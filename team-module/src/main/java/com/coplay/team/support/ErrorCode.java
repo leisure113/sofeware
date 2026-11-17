@@ -14,6 +14,8 @@ public enum ErrorCode {
     DUPLICATE_APPLICATION("TEAM-409-1", "An active application already exists"),
     CANNOT_APPLY_OWN_TEAM("TEAM-422", "Captain cannot apply to own team"),
     NOT_TEAM_CAPTAIN("TEAM-403-2", "Only the captain can perform this action"),
+    NOT_TEAM_MEMBER("TEAM-403-3", "Only an approved member can leave the team"),
+    CAPTAIN_CANNOT_LEAVE("TEAM-422-6", "Captain cannot leave the team"),
     APPLICATION_NOT_FOUND("TEAM-404-2", "Application not found"),
     APPLICATION_NOT_PENDING("TEAM-409-2", "Application is not pending"),
     INVALID_CAPACITY("TEAM-422-1", "Capacity must be between 2 and 10"),
