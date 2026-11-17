@@ -24,6 +24,13 @@
 在项目根目录执行：
 
 ```bat
+test-all.bat
+build-all.bat
+```
+
+也可以直接使用 Maven：
+
+```bat
 mvn test
 mvn package
 ```
@@ -33,6 +40,8 @@ mvn package
 ```bat
 C:\Coding\apache-maven-3.10.0\bin\mvn.cmd -B -Dmaven.repo.local=.m2repo test
 ```
+
+当前测试规模：用户 12 个、内容 12 个、组队 16 个、治理 12 个，共 **52 个 JUnit 5 测试**。
 
 ## 单独运行某个模块
 
