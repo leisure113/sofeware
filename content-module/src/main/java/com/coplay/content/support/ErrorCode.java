@@ -14,7 +14,8 @@ public enum ErrorCode {
     USER_MUTED("USER-403-1", "User is muted"),
     INVALID_TITLE("CONTENT-422", "Title length must be between 3 and 100"),
     INVALID_CONTENT("CONTENT-422-1", "Content length is out of range"),
-    SENSITIVE_CONTENT("CONTENT-422-2", "Text contains sensitive words");
+    SENSITIVE_CONTENT("CONTENT-422-2", "Text contains sensitive words"),
+    NOT_POST_AUTHOR("CONTENT-403", "Only the post author can edit this post");
 
     private final String code;
     private final String message;

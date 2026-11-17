@@ -6,14 +6,15 @@ import java.util.Objects;
 /**
  * Post aggregate root. A post is created as PUBLISHED and can only move to HIDDEN
  * through the content module; DELETED is reserved for the governance adapter.
+ * The author may edit the title and content while the post is still PUBLISHED.
  */
 public final class Post {
 
     private final long postId;
     private final long boardId;
     private final long authorId;
-    private final String title;
-    private final String content;
+    private String title;
+    private String content;
     private final LocalDateTime createdAt;
     private PostStatus status;
 
@@ -62,6 +63,15 @@ public final class Post {
 
     public boolean isPublished() {
         return status == PostStatus.PUBLISHED;
+    }
+
+    /**
+     * Replaces the editable text of the post. The caller validates lengths and
+     * sensitive words; the post id, board, author, creation time and status are kept.
+     */
+    public void edit(String title, String content) {
+        this.title = Objects.requireNonNull(title, "title");
+        this.content = Objects.requireNonNull(content, "content");
     }
 
     /**
