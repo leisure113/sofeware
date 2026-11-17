@@ -134,6 +134,18 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void changePassword(long userId, String oldPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
+        if (!passwordHasher.matches(oldPassword, user.getPasswordHash())) {
+            throw new BizException(ErrorCode.INVALID_OLD_PASSWORD);
+        }
+        validatePassword(newPassword);
+        user.changePassword(passwordHasher.hash(newPassword));
+        userRepository.save(user);
+    }
+
+    @Override
     public UserProfile getProfile(long userId) {
         return userRepository.findById(userId)
                 .map(this::toProfile)

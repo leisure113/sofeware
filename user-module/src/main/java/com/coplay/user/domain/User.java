@@ -13,7 +13,7 @@ public final class User {
     private final long id;
     private final String studentNo;
     private final String email;
-    private final String passwordHash;
+    private String passwordHash;
     private final String nickname;
     private UserStatus status;
     private final Role role;
@@ -60,6 +60,14 @@ public final class User {
 
     public Role getRole() {
         return role;
+    }
+
+    /**
+     * Replaces the stored password hash. The service verifies the old password and validates
+     * the new one before calling this method.
+     */
+    public void changePassword(String passwordHash) {
+        this.passwordHash = Objects.requireNonNull(passwordHash, "passwordHash");
     }
 
     /**
