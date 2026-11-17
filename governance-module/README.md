@@ -7,6 +7,7 @@
 
 - 用户提交举报：目标可以是帖子、评论、用户或队伍；可填写原因、描述和最多 3 条证据。
 - 重复举报拦截：同一用户对同一目标已存在 PENDING 举报时拒绝再次提交。
+- 举报人可在管理员处理前补充证据（`addEvidence`），合计最多 3 条；仅举报人本人可追加。
 - 管理员处理举报：校验管理员身份，举报必须存在且为 PENDING。
 - 举报成立（`valid=true`）时按目标类型调用对应模块的管理接口：
   - `POST` → 内容模块隐藏帖子
@@ -35,7 +36,14 @@ governance-module/
 │  ├─ service/        GovernanceServiceImpl
 │  └─ GovernanceModuleDemo.java
 └─ src/test/java/com/coplay/governance/
-   ├─ GovernanceServiceTest.java
+   ├─ GovernanceServiceTest.java        基线用例（12）
+   ├─ GovernanceTestSupport.java        共享夹具（固定 Clock、内存仓储与 Fake 端口）
+   ├─ SubmitReportTest.java             提交举报正常/异常/边界（30）
+   ├─ HandleReportTest.java             处理举报、目标处置与副作用（20）
+   ├─ AddEvidenceTest.java              补充证据（TDD，12）
+   ├─ ReportQueryTest.java              待处理列表与统计（7）
+   ├─ DomainModelTest.java              领域对象与 DTO 契约（12）
+   ├─ InMemoryRepositoryTest.java       内存仓储排序/计数（8）
    └─ fake/           FakeAdminQueryService、FakeUserQueryService、FakeContentAdminService、
                       FakeUserAdminService、FakeTeamAdminService、FakeNotificationService
 ```
@@ -70,7 +78,14 @@ GovernanceServiceImpl
 - 同一举报人对同一 `(targetType, targetId)` 已有 PENDING 举报时拒绝，返回 `DUPLICATE_REPORT`。
 - 校验通过后创建 PENDING 举报，`createdAt` 取注入的 `Clock`。
 
-### 4.2 处理举报
+### 4.2 补充证据
+
+- 只有原举报人可以补充证据，其他人返回 `NOT_REPORTER`。
+- 举报必须存在（`REPORT_NOT_FOUND`）且为 PENDING（`REPORT_NOT_PENDING`）。
+- 追加后证据总数不能超过 3 条，否则 `TOO_MANY_EVIDENCE`；`null` 证据列表视为空列表。
+- 成功时返回更新后的 `ReportDetail`，持久化到仓储；不改变状态、不写审计日志、不发通知。
+
+### 4.3 处理举报
 
 - 操作人必须是管理员，否则 `NOT_ADMIN`；操作人 id 非法时为 `INVALID_OPERATOR`。
 - 举报必须存在（`REPORT_NOT_FOUND`）且为 PENDING（`REPORT_NOT_PENDING`）。
@@ -78,7 +93,7 @@ GovernanceServiceImpl
 - `valid=true`：先执行目标处置动作（见第 1 节），成功后再置为 `RESOLVED`，写日志并通知。
 - 目标处置动作抛异常时整体返回 `TARGET_ACTION_FAILED`，举报保持 PENDING，不写日志、不发通知。
 
-### 4.3 状态机
+### 4.4 状态机
 
 ```text
             handle(valid=true)  + target action
@@ -89,7 +104,7 @@ PENDING ────────────────────────
 
 `RESOLVED` / `REJECTED` 为终态，不能再次处理。
 
-### 4.4 错误码
+### 4.5 错误码
 
 | 错误码 | 常量 | 含义 |
 |---|---|---|
@@ -101,6 +116,7 @@ PENDING ────────────────────────
 | GOV-422-1 | `INVALID_REASON` | 原因/描述长度不合法 |
 | GOV-422-2 | `TOO_MANY_EVIDENCE` | 证据超过 3 条 |
 | GOV-403-1 | `INVALID_OPERATOR` | 用户 id 非法或非 ACTIVE |
+| GOV-403-2 | `NOT_REPORTER` | 非举报人不能补充证据 |
 | GOV-502 | `TARGET_ACTION_FAILED` | 目标处置接口调用失败 |
 
 ## 5. 运行
@@ -147,33 +163,43 @@ java -jar target\governance-module-1.0.0.jar
 
 ```bat
 & 'C:\Coding\apache-maven-3.10.0\bin\mvn.cmd' -B "-Dmaven.repo.local=C:\Users\warxi\Desktop\dsh\Software Engineering\.m2repo" test
+& 'C:\Coding\apache-maven-3.10.0\bin\mvn.cmd' -B "-Dmaven.repo.local=C:\Users\warxi\Desktop\dsh\Software Engineering\.m2repo" verify
 ```
 
-## 6. 测试清单（JUnit 5，12 个）
+## 6. 测试清单（JUnit 5，101 个）
 
-测试使用 Fake 端口适配器和固定 `Clock`（`2026-11-17T00:00:00Z`），不依赖真实时间与网络。
+测试使用 Fake 端口适配器和固定 `Clock`（`2026-11-17T00:00:00Z`），不依赖真实时间、网络与数据库；
+共 7 个测试类 101 个用例（基线 `GovernanceServiceTest` 12 个 + 新增 89 个）。
 
-| 用例 | 验证点 |
-|---|---|
-| submitCreatesPendingReport | 提交成功，状态 PENDING，字段规范化，createdAt 取固定时钟 |
-| duplicatePendingReportRejected | 同一举报人同一目标的重复 PENDING 举报被拒绝 |
-| submitRejectsTooManyEvidenceAndInvalidTarget | 证据超过 3 条、targetId≤0、targetType 为空均被拒绝 |
-| submitRejectsInvalidReason | 原因过短/过长/为空、描述超过 500 均被拒绝 |
-| nonAdminCannotHandle | 非管理员处理被拒绝，举报保持待处理 |
-| validPostReportHidesPostAndResolves | 成立帖子举报置 RESOLVED，调用 hidePost、写日志、通知举报人 |
-| validUserReportMutesUser | 成立用户举报调用 muteUser，绝不调用 banUser |
-| invalidReportIsRejectedWithoutTargetAction | 不成立举报置 REJECTED，不调用任何目标处置接口 |
-| alreadyHandledReportCannotBeHandledAgain | 已处理举报再次处理返回 REPORT_NOT_PENDING；未知举报返回 REPORT_NOT_FOUND |
-| resolvedAndRejectedReportsNotifyReporter | 成立/不成立都会向举报人发送 REPORT_RESULT 通知 |
-| statsCountsByStatusAndType | 状态计数、各目标类型计数、待处理列表按新到旧排序 |
-| targetActionFailureKeepsReportPending | 目标接口失败返回 TARGET_ACTION_FAILED，举报保持 PENDING |
+| 测试类 | 用例数 | 验证点 |
+|---|---|---|
+| `GovernanceServiceTest`（保留） | 12 | 基线主流程：提交、重复拦截、管理员处理、状态机、通知、统计、目标失败回滚 |
+| `SubmitReportTest` | 30 | 四种目标类型均可提交；reason 2/100 通过、1/101 拒绝；description 500 通过、501 拒绝；evidence 3 通过、4 拒绝；null description/evidence；reporter 非 ACTIVE/未知/≤0；targetId 0/-1、targetType null；重复 PENDING 拦截；已处理（RESOLVED/REJECTED）后允许再次提交；不同举报人/不同目标不误判 |
+| `HandleReportTest` | 20 | 非管理员先于举报查询被拒；operator ≤0；未知举报；已 RESOLVED/REJECTED 再处理；valid=false 不触达目标；POST/COMMENT/USER/TEAM 分别调用 hidePost/hideComment/muteUser/closeTeam 且不误调；四种目标动作失败均保持 PENDING、无日志无通知、handler 字段为空；目标动作执行时举报仍为 PENDING；note trim/空 note；每条处理一条审计日志；仅通知举报人 |
+| `AddEvidenceTest` | 12 | 举报人追加证据（空列表补第一条、补满 3 条）；非举报人 `NOT_REPORTER`；已处理举报 `REPORT_NOT_PENDING`；合计 >3 与单次 >3 均为 `TOO_MANY_EVIDENCE`；未知举报 `REPORT_NOT_FOUND`；举报人校验先于状态校验；null 证据列表为空操作；返回并持久化更新后的详情 |
+| `ReportQueryTest` | 7 | listPending 新到旧（固定时钟下按 id 倒序）、过滤已处理、空列表；brief 字段；stats 按状态/目标类型计数、空仓储全 0、byType 覆盖四种类型且合计等于 total |
+| `DomainModelTest` | 12 | Report 初始 PENDING、evidence 防御性拷贝、resolve/reject 终态与重复迁移异常、markHandledAt 仅限已处理且非 null、appendEvidence 不可变；AdminLog trim/非空校验；SubmitReportCommand/ReportDetail/StatsOverview 的 null 与可变集合防御性拷贝 |
+| `InMemoryRepositoryTest` | 8 | id 自增；save/findById/未知 id；findPending 按 createdAt 倒序、同时间按 id 倒序、过滤已处理；countByStatus；findAll 防御性拷贝；审计日志插入顺序与 id 自增 |
 
 当前测试结果：
 
 ```text
-Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 101, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
+
+覆盖率（JaCoCo 0.8.12，`mvn verify` 门禁，未下调阈值）：
+
+| 指标 | 基线（12 用例） | 最终（101 用例） | 门禁 |
+|---|---|---|---|
+| 指令 INSTRUCTION | 1171/1232 = 95.05% | 1301/1309 = **99.39%** | ≥ 85% |
+| 分支 BRANCH | 50/65 = 76.92% | 70/71 = **98.59%** | ≥ 75% |
+| 行 LINE | 260/269 = 96.65% | 286/288 = **99.31%** | ≥ 85% |
+
+剩余未覆盖的 2 行/1 个分支是 `GovernanceServiceImpl.applyTargetAction` 中枚举
+`switch` 的 `default` 兜底分支；四种目标类型均已覆盖，该分支只在枚举值被扩展且未同步处理时可达，
+属于防御性代码。覆盖率报告位于 `target/site/jacoco/index.html`，机器可读数据为
+`target/site/jacoco/jacoco.csv`。
 
 ## 7. Demo 输出
 
@@ -225,6 +251,7 @@ BUILD SUCCESS
 
 - 本模块定位为“可独立编译运行的领域核心”，没有引入 Spring 和数据库；真正的 Web 层、MyBatis 仓储、JWT 权限在完整项目中接入。
 - 代码使用 Java 17 语法，JDK 21 可编译；测试使用 JUnit 5.10.2。
-- DTO 使用 record（对 evidence 和 byType 做防御性拷贝），领域对象保留 `resolve` / `reject` / `isPending` 状态变更方法，接口与实现分离。
+- DTO 使用 record（对 evidence 和 byType 做防御性拷贝），领域对象保留 `resolve` / `reject` / `isPending` / `appendEvidence` 状态变更方法，接口与实现分离。
 - 服务通过构造器注入 `Clock`，测试使用固定时钟，保证 `createdAt` / `handledAt` / 日志时间可断言。
+- `addEvidence` 按 TDD 实现：先写 12 个失败用例并保留红阶段证据（`target/tdd-red-phase.log`），实现后全部转绿；最终 101 个用例。
 - 所有 Java 源码、注释和控制台输出均为英文；本 README 使用中文。

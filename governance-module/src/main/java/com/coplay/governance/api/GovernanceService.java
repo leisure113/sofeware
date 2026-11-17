@@ -17,6 +17,12 @@ public interface GovernanceService {
 
     ReportDetail handle(HandleReportCommand command);
 
+    /**
+     * Appends supporting evidence to a PENDING report. Only the original reporter may
+     * add evidence, and the combined evidence list may not exceed three items.
+     */
+    ReportDetail addEvidence(long reportId, long reporterId, List<String> evidence);
+
     List<ReportBrief> listPending();
 
     StatsOverview stats();

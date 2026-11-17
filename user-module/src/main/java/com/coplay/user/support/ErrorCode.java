@@ -16,6 +16,7 @@ public enum ErrorCode {
     TOO_MANY_ATTEMPTS("USER-429", "Too many verification attempts"),
     USER_NOT_ACTIVE("USER-403", "User is not active"),
     INVALID_CREDENTIALS("USER-401", "Email or password is incorrect"),
+    INVALID_OLD_PASSWORD("USER-401-2", "Old password is incorrect"),
     NOT_ADMIN("USER-403-1", "Only an administrator can perform this action"),
     INVALID_TOKEN("USER-401-1", "Token is invalid");
 
