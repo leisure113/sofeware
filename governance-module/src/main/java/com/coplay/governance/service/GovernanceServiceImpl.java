@@ -122,6 +122,24 @@ public final class GovernanceServiceImpl implements GovernanceService {
     }
 
     @Override
+    public ReportDetail addEvidence(long reportId, long reporterId, List<String> evidence) {
+        Report report = requireReport(reportId);
+        if (report.getReporterId() != reporterId) {
+            throw new BizException(ErrorCode.NOT_REPORTER);
+        }
+        if (!report.isPending()) {
+            throw new BizException(ErrorCode.REPORT_NOT_PENDING);
+        }
+        List<String> additions = normalizeEvidence(evidence);
+        if (report.getEvidence().size() + additions.size() > MAX_EVIDENCE) {
+            throw new BizException(ErrorCode.TOO_MANY_EVIDENCE);
+        }
+        report.appendEvidence(additions);
+        reportRepository.save(report);
+        return toDetail(report);
+    }
+
+    @Override
     public List<ReportBrief> listPending() {
         return reportRepository.findPending().stream()
                 .map(this::toBrief)

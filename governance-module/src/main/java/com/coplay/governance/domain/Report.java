@@ -1,6 +1,7 @@
 package com.coplay.governance.domain;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -18,7 +19,7 @@ public final class Report {
     private final long targetId;
     private final String reason;
     private final String description;
-    private final List<String> evidence;
+    private List<String> evidence;
     private final LocalDateTime createdAt;
     private ReportStatus status;
     private Long handlerId;
@@ -107,6 +108,16 @@ public final class Report {
         requirePending("reject");
         status = ReportStatus.REJECTED;
         applyHandler(handlerId, note);
+    }
+
+    /**
+     * Appends evidence items to the report. The service enforces ownership, the pending
+     * status and the maximum length; the aggregate only guarantees an immutable snapshot.
+     */
+    public void appendEvidence(List<String> additional) {
+        List<String> combined = new ArrayList<>(evidence);
+        combined.addAll(Objects.requireNonNull(additional, "additional"));
+        this.evidence = List.copyOf(combined);
     }
 
     /**

@@ -13,6 +13,7 @@ public enum ErrorCode {
     INVALID_REASON("GOV-422-1", "Reason length must be between 2 and 100, description at most 500"),
     TOO_MANY_EVIDENCE("GOV-422-2", "At most 3 evidence items are allowed"),
     INVALID_OPERATOR("GOV-403-1", "User id is invalid or the user is not active"),
+    NOT_REPORTER("GOV-403-2", "Only the reporter can add evidence to a report"),
     TARGET_ACTION_FAILED("GOV-502", "Failed to apply the action to the reported target");
 
     private final String code;
