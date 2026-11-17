@@ -26,6 +26,8 @@ public interface TeamService {
 
     void close(long teamId, long captainId);
 
+    void leaveTeam(long teamId, long userId);
+
     void cancelApplication(long teamId, long userId);
 
     void expire(long teamId);
