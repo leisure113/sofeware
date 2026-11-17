@@ -1,0 +1,18 @@
+# Java / Maven
+.m2repo/
+**/target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Build / delivery artifacts
+*.zip
+*.jar
+!team-module/target/team-module-1.0.0.jar
+
+# OS
+.DS_Store
+Thumbs.db
