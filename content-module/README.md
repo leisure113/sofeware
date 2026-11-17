@@ -26,7 +26,19 @@ content-module/
 │  ├─ service/        ContentServiceImpl
 │  └─ ContentModuleDemo.java
 └─ src/test/java/com/coplay/content/
-   ├─ ContentServiceTest.java
+   ├─ ContentServiceTest.java             原有 12 个主流程回归用例
+   ├─ ContentServiceTestSupport.java      固定 Clock + Fake + 内存仓储测试夹具
+   ├─ CreatePostTest.java
+   ├─ GetPostTest.java
+   ├─ ListPostsTest.java
+   ├─ AddCommentTest.java
+   ├─ ListCommentsTest.java
+   ├─ HideContentTest.java
+   ├─ EditPostTest.java                   TDD 新增 editPost
+   ├─ ContentServiceContractTest.java
+   ├─ DomainAndErrorCodeTest.java
+   ├─ InMemoryContentRepositoryTest.java
+   ├─ DtoContractTest.java
    └─ fake/            FakeUserQueryService、FakeGameQueryService、FakeSensitiveWordFilter、FakeNotificationService
 ```
 
@@ -50,11 +62,12 @@ ContentServiceImpl
 - 内容状态：`PUBLISHED → HIDDEN`，预留 `DELETED`；重复隐藏是幂等操作，不会重复通知。
 - 发帖：用户必须 ACTIVE 且未禁言；板块存在且启用；板块所属游戏启用；标题 3—100 字符；正文 1—5000 字符；标题 + 正文不能命中敏感词；保存后状态为 `PUBLISHED`。
 - 读帖：帖子必须存在且为 `PUBLISHED`；`HIDDEN` / `DELETED` 一律按 `POST_NOT_FOUND` 处理，避免暴露违规内容是否存在。
+- 编辑帖子：仅作者本人可编辑，且帖子必须为 `PUBLISHED`；标题 3—100 字符；正文 1—5000 字符；标题 + 正文不能命中敏感词；更新后保持帖子 ID、板块、作者、创建时间和 `PUBLISHED` 状态不变。`HIDDEN` / `DELETED` 按 `POST_NOT_FOUND` 处理，非作者返回 `NOT_POST_AUTHOR`。
 - 帖子列表：板块必须存在；只返回 `PUBLISHED`；按创建时间倒序，时间相同时按帖子 ID 倒序，保证顺序稳定。
 - 评论：帖子存在且为 `PUBLISHED`；用户必须 ACTIVE 且未禁言；评论内容 1—500 字符；命中敏感词拒绝；保存后通知帖子作者，通知类型 `POST_COMMENT`。
 - 评论列表：帖子必须存在；只返回 `PUBLISHED`；按创建时间倒序，时间相同时按评论 ID 倒序。
 - 隐藏帖子 / 评论：目标必须存在；隐藏操作幂等；本模块不做权限判断，由治理适配器完成鉴权；首次隐藏时给作者发 `CONTENT_HIDDEN` 通知。
-- 错误码：`POST_NOT_FOUND`、`COMMENT_NOT_FOUND`、`BOARD_NOT_FOUND`、`BOARD_DISABLED`、`GAME_DISABLED`、`USER_NOT_ACTIVE`、`USER_MUTED`、`INVALID_TITLE`、`INVALID_CONTENT`、`SENSITIVE_CONTENT`。
+- 错误码：`POST_NOT_FOUND`、`COMMENT_NOT_FOUND`、`BOARD_NOT_FOUND`、`BOARD_DISABLED`、`GAME_DISABLED`、`USER_NOT_ACTIVE`、`USER_MUTED`、`INVALID_TITLE`、`INVALID_CONTENT`、`SENSITIVE_CONTENT`、`NOT_POST_AUTHOR`。
 
 ## 5. 运行
 
@@ -85,6 +98,7 @@ build.bat
 ```bat
 mvn test
 mvn package
+mvn verify
 java -jar target\content-module-1.0.0.jar
 ```
 
@@ -93,34 +107,43 @@ java -jar target\content-module-1.0.0.jar
 ```bat
 C:\Coding\apache-maven-3.10.0\bin\mvn.cmd -B -Dmaven.repo.local=..\.m2repo test
 C:\Coding\apache-maven-3.10.0\bin\mvn.cmd -B -Dmaven.repo.local=..\.m2repo package
+C:\Coding\apache-maven-3.10.0\bin\mvn.cmd -B -Dmaven.repo.local=..\.m2repo verify
 java -Dfile.encoding=UTF-8 -jar target\content-module-1.0.0.jar
 ```
 
+`mvn verify` 会运行全部 JUnit 5 测试并执行 JaCoCo 覆盖率门禁（指令 ≥85%、分支 ≥75%、行 ≥85%），报告生成在 `target/site/jacoco/`。
+
 脚本会自动在 PATH 中查找 `mvn`，找不到时回退到绝对路径；本地仓库优先使用项目上一级的 `.m2repo`。
 
-## 6. 测试清单（JUnit 5，12 个）
+## 6. 测试清单（JUnit 5，148 个）
 
-| 用例 | 验证点 |
-|---|---|
-| createPostSuccess | 发帖成功、标题去空格、状态 PUBLISHED、可按 ID 读取 |
-| createPostRejectsInvalidTitle | 标题不足 3 字符被拒绝 |
-| createPostRejectsInactiveUser | 非 ACTIVE 用户被拒绝 |
-| createPostRejectsMutedUser | 禁言用户被拒绝 |
-| createPostRejectsDisabledBoard | 板块被禁用时拒绝发帖 |
-| createPostRejectsDisabledGame | 板块所属游戏被禁用时拒绝发帖 |
-| createPostRejectsSensitiveTitle | 敏感词过滤覆盖标题 |
-| hiddenPostIsNotReadable | 隐藏后按 POST_NOT_FOUND 处理 |
-| addCommentNotifiesPostAuthor | 评论保存成功并通知帖子作者（POST_COMMENT） |
-| addCommentRejectedOnHiddenPost | 隐藏帖子不能继续评论 |
-| listPostsReturnsOnlyPublishedNewestFirst | 列表只含已发布帖子，最新在前，且按板块过滤 |
-| hidePostAndCommentAreIdempotent | 帖子 / 评论隐藏幂等，各只通知一次（CONTENT_HIDDEN） |
+测试统一使用固定 `Clock`（`2026-11-01T00:00:00Z`）、内存仓储和四个 Fake 端口，可重复、无外部依赖。
 
-当前测试结果：
+| 测试类 | 用例数 | 覆盖点 |
+|---|---:|---|
+| ContentServiceTest | 12 | 原有主流程回归：发帖、读帖、评论、列表、隐藏幂等 |
+| CreatePostTest | 31 | 标题 3/100 与 2/101、正文 1/5000 与 0/5001、未知/禁用板块、禁用游戏、未激活/禁言用户、敏感标题/正文、去空格、持久化 |
+| GetPostTest | 4 | 正常读取、未知帖子、隐藏帖子、DELETED 帖子均按 `POST_NOT_FOUND` |
+| ListPostsTest | 8 | 未知板块、空板块、仅 PUBLISHED、createdAt 倒序、同时间按 ID 倒序、板块过滤、摘要字段 |
+| AddCommentTest | 21 | 内容 1/500 与 0/501、空白/空值、未知/隐藏/DELETED 帖子、未激活/禁言用户、敏感词、POST_COMMENT 通知 |
+| ListCommentsTest | 7 | 未知帖子、空列表、仅 PUBLISHED、createdAt 倒序、同时间按 ID 倒序、跨帖子隔离 |
+| HideContentTest | 12 | 未知帖子/评论、幂等隐藏、首次隐藏仅一次 CONTENT_HIDDEN 通知、reason 去空格/空值、DELETED 目标 |
+| EditPostTest | 28 | TDD 新增 editPost：作者编辑、非作者 `NOT_POST_AUTHOR`、未知/隐藏/DELETED、标题/正文边界、敏感词、通知与顺序不变 |
+| ContentServiceContractTest | 7 | 构造器参数非空契约、空命令 NPE |
+| DomainAndErrorCodeTest | 9 | Board/Post/Comment 状态迁移、Post.edit、枚举与错误码、BizException |
+| InMemoryContentRepositoryTest | 4 | 自增 ID、board/post/comment 保存与查询 |
+| DtoContractTest | 5 | DTO record 的 equals/hashCode/toString 值语义 |
+| **合计** | **148** | 全部通过 |
+
+当前测试结果（`mvn verify`）：
 
 ```text
-Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 148, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
+All coverage checks have been met.
 ```
+
+JaCoCo 统计（不含 `ContentModuleDemo`）：指令覆盖率 100%（1145/1145）、分支覆盖率 100%（56/56）、行覆盖率 100%（271/271）、方法覆盖率 100%（82/82）；阈值仍为指令 85%、分支 75%、行 85%。
 
 ## 7. Demo 输出
 

@@ -17,6 +17,8 @@ public interface ContentService {
 
     PostDetail getPost(long postId);
 
+    PostDetail editPost(long postId, long authorId, String title, String content);
+
     List<PostBrief> listPosts(long boardId);
 
     CommentBrief addComment(CreateCommentCommand command);

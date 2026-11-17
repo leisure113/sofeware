@@ -103,6 +103,23 @@ public final class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    public PostDetail editPost(long postId, long authorId, String title, String content) {
+        Post post = requirePost(postId);
+        if (!post.isPublished()) {
+            throw new BizException(ErrorCode.POST_NOT_FOUND);
+        }
+        if (post.getAuthorId() != authorId) {
+            throw new BizException(ErrorCode.NOT_POST_AUTHOR);
+        }
+        String validatedTitle = validateTitle(title);
+        String validatedContent = validatePostContent(content);
+        requireCleanText(validatedTitle + "\n" + validatedContent);
+        post.edit(validatedTitle, validatedContent);
+        repository.savePost(post);
+        return toDetail(post);
+    }
+
+    @Override
     public List<PostBrief> listPosts(long boardId) {
         requireBoard(boardId);
         return repository.findPostsByBoard(boardId).stream()
