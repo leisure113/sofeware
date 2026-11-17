@@ -11,7 +11,9 @@
 # Build / delivery artifacts
 *.zip
 *.jar
-!team-module/target/team-module-1.0.0.jar
+
+# Office temp files
+~$*
 
 # OS
 .DS_Store
