@@ -1,0 +1,11 @@
+ID,Scenario,Modules,CrossModulePorts,Expected,Result
+IT-01,Active user creates team and another active user joins,user+team,UserQueryService/NotificationService,join succeeds,pass
+IT-02,Muted user rejected by content and team,user+content+team,UserQueryService,MUTED code,pass
+IT-03,Reported post hidden after admin handling,content+governance,ContentAdminService/NotificationService,post hidden,pass
+IT-04,Reported comment hidden after admin handling,content+governance,ContentAdminService,comment not listed,pass
+IT-05,Reported user muted and cannot apply,governance+user+team,UserAdminService/UserQueryService,apply rejected,pass
+IT-06,Reported team closed and cannot accept,governance+team,TeamAdminService,team closed,pass
+IT-07,Non-admin cannot handle report,governance,AdminQueryService,NOT_ADMIN,pass
+IT-08,Target action failure keeps report pending,governance+content,ContentAdminService,PENDING/no log/notification,pass
+IT-09,Notifications emitted across modules,content+team+governance,NotificationService,three event types,pass
+IT-10,Unverified user cannot publish or apply,user+content+team,UserQueryService,USER_NOT_ACTIVE,pass
