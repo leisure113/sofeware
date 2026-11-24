@@ -194,11 +194,11 @@ public final class ContentServiceImpl implements ContentService {
     }
 
     private void requireActiveUser(long userId) {
-        if (!userQueryService.isActive(userId)) {
-            throw new BizException(ErrorCode.USER_NOT_ACTIVE);
-        }
         if (userQueryService.isMuted(userId)) {
             throw new BizException(ErrorCode.USER_MUTED);
+        }
+        if (!userQueryService.isActive(userId)) {
+            throw new BizException(ErrorCode.USER_NOT_ACTIVE);
         }
     }
 
